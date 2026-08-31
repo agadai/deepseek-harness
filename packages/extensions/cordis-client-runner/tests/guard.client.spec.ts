@@ -171,6 +171,19 @@ describe('slots seat', () => {
     expect(bench.ledger).toEqual([{ slot: 'root', priority: 5 }])
   })
 
+  it('keeps a list-slot entry at the caller priority so order controls position', async () => {
+    const bench = await boot(['slots'])
+    const slots = bench.facade.slots as { register(options: object, component: unknown): () => void }
+    const spec = vi.spyOn(bench.slots, 'spec').mockReturnValue({ kind: 'list', scope: 'session' })
+    slots.register({ name: 'root', id: 'mine', order: 20 }, C)
+    spec.mockRestore()
+    // List slots are additive: no forced shadowing rank, so the entry keeps the
+    // caller priority (default 0) and `order` owns its position.
+    expect(bench.ledger).toEqual([{ slot: 'root', priority: undefined }])
+    expect(bench.slots.entries('root')[0].options.priority).toBeUndefined()
+    expect(bench.slots.entries('root')[0].options.order).toBe(20)
+  })
+
   it('rejects a malformed register call before touching the registry', async () => {
     const bench = await boot(['slots'])
     const slots = bench.facade.slots as { register(options: unknown, component: unknown): () => void }
