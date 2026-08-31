@@ -116,11 +116,13 @@ function guardedSlots(slots: SlotRegistry, env: DynamicCordisGuardEnv): unknown 
           }
           options.key = `${env.pkg.pluginId}.${env.pkg.packageId}`
         }
-        // Shadowing kinds get a page-local rank. Later registrations sort first;
-        // chain slots keep their own election (select order) untouched.
+        // Shadowing kinds (single/keyed) get a page-local rank so a dynamic
+        // package can shadow a shipped cell; list slots are additive, so `order`
+        // owns their sequence and they keep the caller's priority (default 0).
+        // Chain slots elect by select order; unknown slots stay shadowing.
         const spec = (slots.spec as (key: string) => { kind?: string } | undefined)(slot)
         let priority = options.priority
-        if (spec === undefined || spec.kind !== 'chain') {
+        if (spec === undefined || spec.kind === 'single' || spec.kind === 'keyed') {
           priority = env.allocatePriority()
           options.priority = priority
         }
